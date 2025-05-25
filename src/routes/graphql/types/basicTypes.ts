@@ -99,7 +99,16 @@ export const Profile = new GraphQLObjectType({
     id: { type: new GraphQLNonNull(UUIDType) },
     isMale: { type: new GraphQLNonNull(GraphQLBoolean) },
     yearOfBirth: { type: new GraphQLNonNull(GraphQLInt) },
-    memberType: { type: new GraphQLNonNull(MemberType) },
+    memberType: {
+      type: new GraphQLNonNull(MemberType),
+      resolve: async (
+        parent: { memberTypeId: string },
+        _args,
+        { loaders }: ContextType,
+      ) => {
+        return loaders.memberType.load(parent.memberTypeId);
+      },
+    },
   },
 });
 
@@ -109,34 +118,36 @@ export const User: GraphQLObjectType = new GraphQLObjectType({
     id: { type: new GraphQLNonNull(UUIDType) },
     name: { type: new GraphQLNonNull(GraphQLString) },
     balance: { type: new GraphQLNonNull(GraphQLFloat) },
-    profile: { type: Profile }, // nullable
-    posts: { type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(Post))) },
+    profile: {
+      type: Profile,
+      resolve: async (parent: { id: string }, _args, { loaders }: ContextType) => {
+        return loaders.profileByUserId.load(parent.id);
+      },
+    }, // nullable
+    posts: {
+      type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(Post))),
+      resolve: async (parent: { id: string }, _args, { loaders }: ContextType) => {
+        return loaders.postByUserIds.load(parent.id);
+      },
+    },
     userSubscribedTo: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
-      resolve: async (parent: { id: string }, _args, { prisma }: ContextType) => {
-        return prisma.user.findMany({
-          where: {
-            subscribedToUser: {
-              some: {
-                subscriberId: parent.id,
-              },
-            },
-          },
-        });
+      resolve: async (
+        parent: { id: string },
+        _args,
+        { prisma, loaders }: ContextType,
+      ) => {
+        return loaders.userSubscribedTo.load(parent.id);
       },
     },
     subscribedToUser: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
-      resolve: async (parent: { id: string }, _args, { prisma }: ContextType) => {
-        return prisma.user.findMany({
-          where: {
-            userSubscribedTo: {
-              some: {
-                authorId: parent.id,
-              },
-            },
-          },
-        });
+      resolve: async (
+        parent: { id: string },
+        _args,
+        { prisma, loaders }: ContextType,
+      ) => {
+        return loaders.subscribedToUser.load(parent.id);
       },
     },
   }),

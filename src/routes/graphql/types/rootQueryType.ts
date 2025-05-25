@@ -2,8 +2,9 @@ import { GraphQLObjectType, GraphQLNonNull, GraphQLList } from 'graphql';
 import { MemberType, MemberTypeIdEnum, Post, Profile, User } from './basicTypes.js';
 import { UUIDType } from './uuid.js';
 import { PrismaClient } from '@prisma/client';
+import { Loaders } from '../loaders/loaderTypes.js';
 
-export type ContextType = { prisma: PrismaClient };
+export type ContextType = { prisma: PrismaClient; loaders: Loaders };
 
 export const RootQueryType = new GraphQLObjectType({
   name: 'RootQueryType',
@@ -35,17 +36,17 @@ export const RootQueryType = new GraphQLObjectType({
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
       resolve: async (_parent, _args, { prisma }: ContextType) => {
         const result = await prisma.user.findMany({
-          include: {
-            profile: {
-              include: {
-                memberType: true,
-              },
-            },
+          // include: {
+          //   profile: {
+          //     include: {
+          //       memberType: true,
+          //     },
+          //   },
 
-            posts: true,
-            userSubscribedTo: true,
-            subscribedToUser: true,
-          },
+          //   posts: true,
+          //   userSubscribedTo: true,
+          //   subscribedToUser: true,
+          // },
         });
 
         return result ?? [];
@@ -59,22 +60,14 @@ export const RootQueryType = new GraphQLObjectType({
           where: {
             id: args.id,
           },
-          include: {
-            profile: {
-              include: {
-                memberType: true,
-              },
-            },
-            posts: true,
-            userSubscribedTo: {
-              include: { author: true, subscriber: true },
-            },
-            subscribedToUser: {
-              include: {
-                author: true,
-              },
-            },
-          },
+          // include: {
+          //   profile: {
+          //     include: {
+          //       memberType: true,
+          //     },
+          //   },
+          //   posts: true,
+          // },
         });
 
         return user;
@@ -114,9 +107,9 @@ export const RootQueryType = new GraphQLObjectType({
           where: {
             id: args.id,
           },
-          include: {
-            memberType: true,
-          },
+          // include: {
+          //   memberType: true,
+          // },
         });
 
         return profile;
