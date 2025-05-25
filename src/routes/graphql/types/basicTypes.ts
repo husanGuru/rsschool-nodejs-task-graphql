@@ -10,6 +10,7 @@ import {
   GraphQLEnumType,
 } from 'graphql';
 import { UUIDType } from './uuid.js';
+import { ContextType } from './rootQueryType.js';
 
 // Enum MemberTypeId
 export const MemberTypeIdEnum = new GraphQLEnumType({
@@ -112,9 +113,31 @@ export const User: GraphQLObjectType = new GraphQLObjectType({
     posts: { type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(Post))) },
     userSubscribedTo: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
+      resolve: async (parent: { id: string }, _args, { prisma }: ContextType) => {
+        return prisma.user.findMany({
+          where: {
+            subscribedToUser: {
+              some: {
+                subscriberId: parent.id,
+              },
+            },
+          },
+        });
+      },
     },
     subscribedToUser: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
+      resolve: async (parent: { id: string }, _args, { prisma }: ContextType) => {
+        return prisma.user.findMany({
+          where: {
+            userSubscribedTo: {
+              some: {
+                authorId: parent.id,
+              },
+            },
+          },
+        });
+      },
     },
   }),
 });

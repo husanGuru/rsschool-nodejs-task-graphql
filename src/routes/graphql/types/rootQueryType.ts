@@ -2,16 +2,15 @@ import { GraphQLObjectType, GraphQLNonNull, GraphQLList } from 'graphql';
 import { MemberType, MemberTypeIdEnum, Post, Profile, User } from './basicTypes.js';
 import { UUIDType } from './uuid.js';
 import { PrismaClient } from '@prisma/client';
-import { httpErrors } from '@fastify/sensible';
 
-type ContextType = { prisma: PrismaClient };
+export type ContextType = { prisma: PrismaClient };
 
 export const RootQueryType = new GraphQLObjectType({
   name: 'RootQueryType',
   fields: {
     memberTypes: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(MemberType))),
-      resolve: async (_obj, args, { prisma }: ContextType) => {
+      resolve: async (_obj, _args, { prisma }: ContextType) => {
         return prisma.memberType.findMany();
       },
     },
@@ -28,9 +27,7 @@ export const RootQueryType = new GraphQLObjectType({
             id: args.id,
           },
         });
-        // if (memberType === null) {
-        //   throw httpErrors.notFound();
-        // }
+
         return memberType;
       },
     },
@@ -69,16 +66,21 @@ export const RootQueryType = new GraphQLObjectType({
               },
             },
             posts: true,
-            userSubscribedTo: true,
-            subscribedToUser: true,
+            userSubscribedTo: {
+              include: { author: true, subscriber: true },
+            },
+            subscribedToUser: {
+              include: {
+                author: true,
+              },
+            },
           },
         });
-        // if (user === null) {
-        //   throw httpErrors.notFound();
-        // }
+
         return user;
       },
     },
+
     posts: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(Post))),
       resolve: async (_parent, _args, { prisma }: ContextType) => {
@@ -94,9 +96,7 @@ export const RootQueryType = new GraphQLObjectType({
             id: args.id,
           },
         });
-        // if (post === null) {
-        //   throw httpErrors.notFound();
-        // }
+
         return post;
       },
     },
@@ -118,9 +118,7 @@ export const RootQueryType = new GraphQLObjectType({
             memberType: true,
           },
         });
-        // if (profile === null) {
-        //   throw httpErrors.notFound();
-        // }
+
         return profile;
       },
     },
