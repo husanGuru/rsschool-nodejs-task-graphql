@@ -41,8 +41,7 @@ await test('gql-loader-prime', async (t) => {
 
     const history = afterHistory.slice(beforeHistory.length);
     const foundUserCall = history.find(
-      ({ model, operation, args }) =>
-        model === 'User' &&
+      ({ model, operation, args }) => model === 'User' &&
         operation === 'findMany' &&
         args.include.subscribedToUser === true &&
         args.include.userSubscribedTo === true,

@@ -1,10 +1,23 @@
-import { GraphQLObjectType, GraphQLNonNull, GraphQLList } from 'graphql';
+import {
+  GraphQLObjectType,
+  GraphQLNonNull,
+  GraphQLList,
+  GraphQLResolveInfo,
+} from 'graphql';
 import { MemberType, MemberTypeIdEnum, Post, Profile, User } from './basicTypes.js';
 import { UUIDType } from './uuid.js';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { Loaders } from '../loaders/loaderTypes.js';
+import { parseResolveInfo } from 'graphql-parse-resolve-info';
 
 export type ContextType = { prisma: PrismaClient; loaders: Loaders };
+
+interface UserWithOptionalSubs {
+  id: string;
+  name: string;
+  userSubscribedTo?: { author: unknown }[];
+  subscribedToUser?: { subscriber: unknown }[];
+}
 
 export const RootQueryType = new GraphQLObjectType({
   name: 'RootQueryType',
@@ -34,22 +47,85 @@ export const RootQueryType = new GraphQLObjectType({
     },
     users: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(User))),
-      resolve: async (_parent, _args, { prisma }: ContextType) => {
-        const result = await prisma.user.findMany({
-          // include: {
-          //   profile: {
-          //     include: {
-          //       memberType: true,
-          //     },
-          //   },
+      resolve: async (
+        _parent,
+        _args,
+        { prisma, loaders }: ContextType,
+        info: GraphQLResolveInfo,
+      ) => {
+        const parsed = parseResolveInfo(info);
+        const fields = parsed?.fieldsByTypeName?.User ?? {};
 
-          //   posts: true,
-          //   userSubscribedTo: true,
-          //   subscribedToUser: true,
-          // },
-        });
+        switch (true) {
+          case 'userSubscribedTo' in fields && 'subscribedToUser' in fields: {
+            const users = await prisma.user.findMany({
+              include: {
+                userSubscribedTo: true,
+                subscribedToUser: true,
+              },
+            });
 
-        return result ?? [];
+            for (const user of users) {
+              if (user.userSubscribedTo) {
+                loaders.userSubscribedTo.prime(
+                  user.id,
+                  user.userSubscribedTo.map((v) => ({ id: v.authorId })),
+                );
+              }
+
+              if (user.subscribedToUser) {
+                loaders.subscribedToUser.prime(
+                  user.id,
+                  user.subscribedToUser.map((v) => ({ id: v.subscriberId })),
+                );
+              }
+            }
+
+            return users;
+          }
+          case 'userSubscribedTo' in fields: {
+            const users = await prisma.user.findMany({
+              include: {
+                userSubscribedTo: true,
+              },
+            });
+
+            for (const user of users) {
+              if (user.userSubscribedTo) {
+                loaders.userSubscribedTo.prime(
+                  user.id,
+                  user.userSubscribedTo.map((v) => ({ id: v.authorId })),
+                );
+              }
+            }
+
+            return users;
+          }
+          case 'subscribedToUser' in fields: {
+            const users = await prisma.user.findMany({
+              include: {
+                subscribedToUser: true,
+              },
+            });
+
+            for (const user of users) {
+              if (user.subscribedToUser) {
+                loaders.subscribedToUser.prime(
+                  user.id,
+                  user.subscribedToUser.map((v) => ({ id: v.subscriberId })),
+                );
+              }
+            }
+
+            return users;
+          }
+
+          default: {
+            const users = await prisma.user.findMany();
+
+            return users;
+          }
+        }
       },
     },
     user: {

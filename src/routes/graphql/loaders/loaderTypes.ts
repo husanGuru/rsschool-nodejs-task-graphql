@@ -8,6 +8,6 @@ export type Loaders = {
   memberType: DataLoader<string, MemberType | null>;
   postByUserIds: DataLoader<string, Post | null>;
   profileByUserId: DataLoader<string, Profile | null>;
-  userSubscribedTo: DataLoader<string, User[]>;
-  subscribedToUser: DataLoader<string, User[]>;
+  userSubscribedTo: DataLoader<string, (User | string | { id: string })[]>;
+  subscribedToUser: DataLoader<string, (User | string | { id: string })[]>;
 };
